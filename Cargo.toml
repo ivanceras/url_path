@@ -1,9 +1,11 @@
 [package]
 name = "url_path"
-version = "0.1.0"
-authors = ["lee"]
+version = "0.1.1"
+authors = [ "Jovansonlee Cesar <ivanceras@gmail.com>" ]
 edition = "2018"
-
-description = "Manipulate urls"
+description = "canonicalize, normalize urls"
+repository = "https://github.com/ivanceras/url_path"
+documentation = "https://docs.rs/url_path"
+keywords = ["url", "canonicalize", "normalize"]
 license = "MIT"
 
