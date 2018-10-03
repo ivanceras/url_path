@@ -15,11 +15,14 @@
 //!     assert_eq!("README.md", normalized_path2);
 //! }
 //! ```
-pub struct UrlPath{
-    pub parent: Option<String>,
-    /// the last element of the url when split with `/`
-    pub last: Option<String>,
-    is_absolute: bool,
+pub enum UrlPath{
+    Path{
+        parent: Option<String>,
+        /// the last element of the url when split with `/`
+        last: Option<String>,
+        is_absolute: bool,
+    },
+    External(String),
 }
 
 impl UrlPath{
@@ -27,15 +30,31 @@ impl UrlPath{
     pub fn new(path: &str) -> Self {
         let (parent, last) = Self::canonicalize(path);
         let is_absolute = path.starts_with("/");
-        UrlPath{
-            parent,
-            last,
-            is_absolute,
+        let is_external = path.starts_with("http:")
+            || path.starts_with("https:");
+        if is_external{
+            UrlPath::External(path.to_string())
+        }else{
+            UrlPath::Path{
+                parent,
+                last,
+                is_absolute,
+            }
         }
     }
 
     pub fn is_absolute(&self) -> bool {
-        self.is_absolute
+        match self{
+            UrlPath::Path{ref is_absolute,..} => *is_absolute,
+            UrlPath::External(_) => false,
+        }
+    }
+
+    pub fn is_external(&self) -> bool {
+        match self{
+            UrlPath::External(_) => true,
+            UrlPath::Path{..} => false,
+        }
     }
 
     /// use own implementation of canonicalize since fs::canonicalize
@@ -62,30 +81,49 @@ impl UrlPath{
         (parent, filename)
     }
 
+    pub fn last(&self) -> Option<String> {
+        match self{
+            UrlPath::Path{last,..} => last.clone(),
+            UrlPath::External(_) => None,
+        }
+    }
+
+    pub fn parent(&self) -> Option<String> {
+        match self{
+            UrlPath::Path{parent,..} => parent.clone(),
+            UrlPath::External(_) => None,
+        }
+    }
+
 
     pub fn normalize(&self) -> String {
-        let full_path = if let Some(ref parent) = self.parent {
-            if let Some(ref file) = self.last{
-                format!("{}/{}", parent, file)
-            }else{
-                format!("{}", parent)
-            }
-        }
-        else if let Some(ref file) = self.last{
-            if let Some(ref parent) = self.parent{
-                format!("{}/{}", parent, file)
-            }else{
-                format!("{}", file)
-            }
-        }
-        else{
-            "".to_string()
-        };
+        match self{
+            UrlPath::Path{parent, last, is_absolute} => {
+                let full_path = if let Some(ref parent) = parent {
+                    if let Some(ref file) = last{
+                        format!("{}/{}", parent, file)
+                    }else{
+                        format!("{}", parent)
+                    }
+                }
+                else if let Some(ref file) = last{
+                    if let Some(ref parent) = parent{
+                        format!("{}/{}", parent, file)
+                    }else{
+                        format!("{}", file)
+                    }
+                }
+                else{
+                    "".to_string()
+                };
 
-        if self.is_absolute{
-            format!("/{}", full_path)
-        }else{
-            full_path
+                if *is_absolute{
+                    format!("/{}", full_path)
+                }else{
+                    full_path
+                }
+            }
+            UrlPath::External(ref s) => s.to_string(),
         }
     }
 }
@@ -111,6 +149,17 @@ mod tests {
         let path = UrlPath::new(url);
         let result = path.normalize();
         let expected = "README.md";
+        assert_eq!(expected, result);
+    }
+
+
+    #[test]
+    fn external_link(){
+        let url = "https://raw.githubusercontent.com/ivanceras/svgbob/master/TODO.md";
+        let path = UrlPath::new(url);
+        assert!(path.is_external());
+        let result = path.normalize();
+        let expected = "https://raw.githubusercontent.com/ivanceras/svgbob/master/TODO.md";
         assert_eq!(expected, result);
     }
 
@@ -155,8 +204,8 @@ mod tests {
         let url = "README.md";
         let path = UrlPath::new(url);
         let last = "README.md";
-        assert_eq!(Some(last.to_string()), path.last);
-        assert_eq!(None, path.parent);
+        assert_eq!(Some(last.to_string()), path.last());
+        assert_eq!(None, path.parent());
     }
 
     #[test]
@@ -164,8 +213,8 @@ mod tests {
         let url = "md/../README.md";
         let path = UrlPath::new(url);
         let last = "README.md";
-        assert_eq!(Some(last.to_string()), path.last);
-        assert_eq!(None, path.parent);
+        assert_eq!(Some(last.to_string()), path.last());
+        assert_eq!(None, path.parent());
     }
 
     #[test]
