@@ -1,3 +1,5 @@
+#![deny(warnings)]
+
 //! url_path
 //! Manipulate url paths without requiring the file to exist in the server or OS
 //! This is useful for manipulating location urls
