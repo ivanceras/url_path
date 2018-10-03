@@ -29,9 +29,11 @@ impl UrlPath{
 
     pub fn new(path: &str) -> Self {
         let (parent, last) = Self::canonicalize(path);
-        let is_absolute = path.starts_with("/");
         let is_external = path.starts_with("http:")
             || path.starts_with("https:");
+
+        let is_absolute = path.starts_with("/");
+
         if is_external{
             UrlPath::External(path.to_string())
         }else{
