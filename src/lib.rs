@@ -99,6 +99,21 @@ impl UrlPath{
         }
     }
 
+    /// return the extension (ie: html, md, txt ) of the path if there is
+    pub fn extension(&self) -> Option<String>{
+        if let Some(last) = self.last(){
+            let splinters:Vec<&str> = last.split(".").collect();
+            if splinters.len() > 0 {
+            let last = splinters[splinters.len()-1];
+                Some(last.to_string())
+            }else{
+                None
+            }
+        }else{
+            None
+        }
+    }
+
 
     pub fn normalize(&self) -> String {
         match self{
@@ -227,6 +242,24 @@ mod tests {
         let path = UrlPath::new(url);
         let result = path.normalize();
         let expected = "README.md";
+        assert_eq!(expected, result);
+    }
+
+    #[test]
+    fn md_extension() {
+        let url = "../../README.md";
+        let path = UrlPath::new(url);
+        let result = path.extension();
+        let expected = Some("md".to_string());
+        assert_eq!(expected, result);
+    }
+
+    #[test]
+    fn html_extension() {
+        let url = "index.html";
+        let path = UrlPath::new(url);
+        let result = path.extension();
+        let expected = Some("html".to_string());
         assert_eq!(expected, result);
     }
 }
