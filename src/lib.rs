@@ -114,7 +114,16 @@ impl UrlPath{
         }
     }
 
+    pub fn is_extension(&self, ext: &str) -> bool {
+        if let Some(ex) = self.extension(){
+            ex == ext
+        }else{
+            false
+        }
+    }
 
+
+    /// return the constructed file
     pub fn normalize(&self) -> String {
         match self{
             UrlPath::Path{parent, last, is_absolute} => {
