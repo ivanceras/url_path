@@ -17,8 +17,8 @@
 //!     assert_eq!("README.md", normalized_path2);
 //! }
 //! ```
-pub enum UrlPath{
-    Path{
+pub enum UrlPath {
+    Path {
         parent: Option<String>,
         /// the last element of the url when split with `/`
         last: Option<String>,
@@ -27,19 +27,17 @@ pub enum UrlPath{
     External(String),
 }
 
-impl UrlPath{
-
+impl UrlPath {
     pub fn new(path: &str) -> Self {
         let (parent, last) = Self::canonicalize(path);
-        let is_external = path.starts_with("http:")
-            || path.starts_with("https:");
+        let is_external = path.starts_with("http:") || path.starts_with("https:");
 
         let is_absolute = path.starts_with("/");
 
-        if is_external{
+        if is_external {
             UrlPath::External(path.to_string())
-        }else{
-            UrlPath::Path{
+        } else {
+            UrlPath::Path {
                 parent,
                 last,
                 is_absolute,
@@ -48,106 +46,115 @@ impl UrlPath{
     }
 
     pub fn is_absolute(&self) -> bool {
-        match self{
-            UrlPath::Path{ref is_absolute,..} => *is_absolute,
+        match self {
+            UrlPath::Path {
+                ref is_absolute, ..
+            } => *is_absolute,
             UrlPath::External(_) => false,
         }
     }
 
     pub fn is_external(&self) -> bool {
-        match self{
+        match self {
             UrlPath::External(_) => true,
-            UrlPath::Path{..} => false,
+            UrlPath::Path { .. } => false,
         }
     }
 
     /// use own implementation of canonicalize since fs::canonicalize
     /// requires the file to be there
     fn canonicalize(path: &str) -> (Option<String>, Option<String>) {
-        let segments:Vec<&str> = path.split("/").collect();
-        let mut path:Vec<String> = vec![];
-        let segments2:Vec<&str> = segments.into_iter()
-                .filter(|s|!(s.is_empty() || *s == ".")).collect();
-        let _filtered:Vec<&str> = segments2.into_iter()
-            .inspect(|s| 
-                 if *s == ".."{
+        let segments: Vec<&str> = path.split("/").collect();
+        let mut path: Vec<String> = vec![];
+        let segments2: Vec<&str> = segments
+            .into_iter()
+            .filter(|s| !(s.is_empty() || *s == "."))
+            .collect();
+        let _filtered: Vec<&str> = segments2
+            .into_iter()
+            .inspect(|s| {
+                if *s == ".." {
                     path.pop();
-                 }else{
+                } else {
                     path.push(s.to_string())
-                 }).collect();
+                }
+            })
+            .collect();
         let filename = path.pop();
         let parent = path.join("/");
-        let parent = if parent.is_empty(){
+        let parent = if parent.is_empty() {
             None
-        }else{
+        } else {
             Some(parent)
         };
         (parent, filename)
     }
 
     pub fn last(&self) -> Option<String> {
-        match self{
-            UrlPath::Path{last,..} => last.clone(),
+        match self {
+            UrlPath::Path { last, .. } => last.clone(),
             UrlPath::External(_) => None,
         }
     }
 
     pub fn parent(&self) -> Option<String> {
-        match self{
-            UrlPath::Path{parent,..} => parent.clone(),
+        match self {
+            UrlPath::Path { parent, .. } => parent.clone(),
             UrlPath::External(_) => None,
         }
     }
 
     /// return the extension (ie: html, md, txt ) of the path if there is
-    pub fn extension(&self) -> Option<String>{
-        if let Some(last) = self.last(){
-            let splinters:Vec<&str> = last.split(".").collect();
+    pub fn extension(&self) -> Option<String> {
+        if let Some(last) = self.last() {
+            let splinters: Vec<&str> = last.split(".").collect();
             if splinters.len() > 0 {
-            let last = splinters[splinters.len()-1];
+                let last = splinters[splinters.len() - 1];
                 Some(last.to_string())
-            }else{
+            } else {
                 None
             }
-        }else{
+        } else {
             None
         }
     }
 
+    /// returns true if the extension of this path matched the argument extension `ext`
     pub fn is_extension(&self, ext: &str) -> bool {
-        if let Some(ex) = self.extension(){
+        if let Some(ex) = self.extension() {
             ex == ext
-        }else{
+        } else {
             false
         }
     }
 
-
     /// return the constructed file
     pub fn normalize(&self) -> String {
-        match self{
-            UrlPath::Path{parent, last, is_absolute} => {
+        match self {
+            UrlPath::Path {
+                parent,
+                last,
+                is_absolute,
+            } => {
                 let full_path = if let Some(ref parent) = parent {
-                    if let Some(ref file) = last{
+                    if let Some(ref file) = last {
                         format!("{}/{}", parent, file)
-                    }else{
+                    } else {
                         format!("{}", parent)
                     }
-                }
-                else if let Some(ref file) = last{
-                    if let Some(ref parent) = parent{
+                } else if let Some(ref file) = last {
+                    if let Some(ref parent) = parent {
                         format!("{}/{}", parent, file)
-                    }else{
+                    } else {
                         format!("{}", file)
                     }
-                }
-                else{
+                } else {
                     "".to_string()
                 };
 
-                if *is_absolute{
+                if *is_absolute {
                     format!("/{}", full_path)
-                }else{
+                } else {
                     full_path
                 }
             }
@@ -155,9 +162,6 @@ impl UrlPath{
         }
     }
 }
-
-
-
 
 #[cfg(test)]
 mod tests {
@@ -172,7 +176,7 @@ mod tests {
     }
 
     #[test]
-    fn relative_file(){
+    fn relative_file() {
         let url = "./README.md";
         let path = UrlPath::new(url);
         let result = path.normalize();
@@ -180,9 +184,8 @@ mod tests {
         assert_eq!(expected, result);
     }
 
-
     #[test]
-    fn external_link(){
+    fn external_link() {
         let url = "https://raw.githubusercontent.com/ivanceras/svgbob/master/TODO.md";
         let path = UrlPath::new(url);
         assert!(path.is_external());
